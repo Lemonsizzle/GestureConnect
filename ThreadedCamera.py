@@ -41,6 +41,10 @@ class Camera:
                 break
 
             cTime = time.time()
+
+            if cTime - pTime == 0:
+                continue
+
             self.fps = int(1/(cTime - pTime))
             pTime = cTime
 
