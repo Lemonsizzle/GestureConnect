@@ -114,6 +114,8 @@ class Display(Tk):
         Button(classButtons, text="Paper", command=lambda: self.record("paper")).grid(row=0, column=1, sticky=W)
         Button(classButtons, text="Scissors", command=lambda: self.record("scissors")).grid(row=0, column=2, sticky=W)
         Button(classButtons, text="Thumbs Up", command=lambda: self.record("tu")).grid(row=0, column=3, sticky=W)
+        Button(classButtons, text="Gun", command=lambda: self.record("gun")).grid(row=0, column=4, sticky=W)
+        Button(classButtons, text="Point", command=lambda: self.record("point")).grid(row=0, column=5, sticky=W)
 
     def rotate_points(self, points, theta, origin):
         ox, oy = origin
@@ -130,18 +132,43 @@ class Display(Tk):
 
         return rotated_points
 
-    def distance_from_wrist(self, point, origin):
-        x1, y1, z1 = point
-        x2, y2, z2 = origin
+    def distance(self, point1, point2):
+        x1, y1, z1 = point1
+        x2, y2, z2 = point2
         return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
 
     def record(self, shape):
 
         if self.resultHand:
             if self.resultHand.multi_hand_landmarks:
+                xs, ys, zs = [], [], []
                 data_points = [shape]
                 landmark_list = self.resultHand.multi_hand_landmarks[0]
                 for idx, landmark in enumerate(landmark_list.landmark):
+                    xs.append(landmark.x)
+                    ys.append(landmark.y)
+                    zs.append(landmark.z)
+
+                minx, maxx = np.min(xs), np.max(xs)
+                miny, maxy = np.min(ys), np.max(ys)
+                minz, maxz = np.min(zs), np.max(zs)
+
+                point1 = (minx, miny, minz)
+                point2 = (maxx, maxy, maxz)
+
+                longest_length = self.distance(point1, point2)
+
+                for idx, (x, y, z) in enumerate(zip(xs, ys, zs)):
+                    if idx == 0:
+                        data_points.append(x)
+                        data_points.append(y)
+                        data_points.append(z)
+                    else:
+                        dist = self.distance((x, y, z), (data_points[1], data_points[2], data_points[3]))
+                        norm_dist = dist / longest_length
+                        data_points.append(norm_dist)
+
+                """for idx, landmark in enumerate(landmark_list.landmark):
                     if idx == 0:
                         data_points.append(landmark.x)
                         data_points.append(landmark.y)
@@ -149,7 +176,7 @@ class Display(Tk):
                     else:
                         x, y, z = (landmark.x, landmark.y, landmark.z)
                         dist = self.distance_from_wrist((x, y, z), (data_points[1], data_points[2], data_points[3]))
-                        data_points.append(dist)
+                        data_points.append(dist)"""
 
                 print(data_points)
 

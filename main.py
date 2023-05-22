@@ -8,12 +8,9 @@ import cv2 as cv
 from PIL import ImageTk, Image
 from ThreadedCamera import Camera
 from HandPositionIdentifier import HPI
-
-import matplotlib.pyplot as plt
+import numpy as np
 
 import mediapipe as mp
-
-import win32api
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -41,8 +38,6 @@ class Display(Tk):
         self.camera = Camera(0)
         self.camera.start()
 
-        # self.cap = cv.VideoCapture(0)
-
         self.__initVariables()
 
         self.__addComponents()
@@ -51,10 +46,6 @@ class Display(Tk):
         self.mainloop()
 
     def __initVariables(self):
-        self.displayW, self.displayH = win32api.GetSystemMetrics(0), win32api.GetSystemMetrics(1)
-
-        self.pTime = time.time()
-
         self.labelText = StringVar()
 
         self.tolerance = DoubleVar()
@@ -65,21 +56,12 @@ class Display(Tk):
         self.hFlip = IntVar()
         self.vFlip = IntVar()
 
-        # Cam tracking variables
-        self.trackHands = IntVar()
-        self.trackEyes = IntVar()
-
         # Interaction variables
-        self.recog = IntVar()
-        self.cursor = IntVar()
+        self.tracking = True
 
         self.hands = mp_hands.Hands(model_complexity=0,
                                     min_detection_confidence=0.5,
                                     min_tracking_confidence=0.8)
-
-        self.holistic = mp_holistic.Holistic(model_complexity=0,
-                                             min_detection_confidence=0.5,
-                                             min_tracking_confidence=0.8)
 
         self.resultHand = None
 
@@ -95,58 +77,31 @@ class Display(Tk):
                       pady=10)
         label.grid(row=1, column=0)
 
-        slider = Scale(self, from_=0.0, to=0.08, resolution=0.01, orient=HORIZONTAL, variable=self.tolerance,
-                       label="Tolerance")
-        slider.grid(row=2, column=0)
-
         # Cam adjustment group
         camAdjustments = Frame(self)
-        camAdjustments.grid(row=3, column=0)
+        camAdjustments.grid(row=2, column=0)
 
         # Checkboxes for cam flipping
         Checkbutton(camAdjustments, text="FPS Counter", variable=self.showFPS).grid(row=0, column=0, sticky=W)
         Checkbutton(camAdjustments, text="Horizontal Flip", variable=self.hFlip).grid(row=0, column=1, sticky=W)
         Checkbutton(camAdjustments, text="Vertical Flip", variable=self.vFlip).grid(row=0, column=2, sticky=W)
 
-        # Tracking group
-        trackOptions = Frame(self)
-        trackOptions.grid(row=4, column=0)
-
-        # Checkboxes for tracking
-        Checkbutton(trackOptions, text="Track Hands", variable=self.trackHands).grid(row=0, column=0, sticky=W)
-        Checkbutton(trackOptions, text="Track Eyes", variable=self.trackEyes).grid(row=0, column=1, sticky=W)
-
         # Checkboxes for interactivity
         interactions = Frame(self)
-        interactions.grid(row=5, column=0)
+        interactions.grid(row=3, column=0)
 
-        Checkbutton(interactions, text="Recognition", variable=self.recog).grid(row=0, column=0, sticky=W)
-        Checkbutton(interactions, text="Cursor", variable=self.cursor).grid(row=0, column=1, sticky=W)
+        self.pauseButton = Button(interactions, text="Pause", command=self.pauseTracking)
+        self.pauseButton.grid(row=0, column=0, sticky=W)
 
-        # Macro recording group
-        recordingButtons = Frame(self)
-        recordingButtons.grid(row=6, column=0)
-
-        # Buttons for recording macros
-        Button(recordingButtons, text="Record Hand", command=self.record).grid(row=0, column=0, sticky=W)
-
-    def record(self):
-        if self.resultHand:
-            if self.resultHand.multi_hand_landmarks:
-                data = []
-                landmark_list = self.resultHand.multi_hand_landmarks[0]
-                for idx, landmark in enumerate(landmark_list.landmark):
-                    data.append(landmark.x)
-                    data.append(landmark.y)
-
-                self.classifier.identify(data)
+    def pauseTracking(self):
+        self.tracking = not self.tracking
+        self.pauseButton.config(text=("Pause" if self.tracking else "Resume"))
 
     def onClose(self):
-        # if messagebox.askokcancel("Quit", "Do you want to quit?"):
         self.camera.stop()
         self.destroy()
 
-    def distance_from_wrist(self, point, origin):
+    def distance(self, point, origin):
         x1, y1, z1 = point
         x2, y2, z2 = origin
         return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
@@ -167,53 +122,47 @@ class Display(Tk):
         if not self.hFlip.get():
             frame = cv.flip(frame, 1)
 
-        if self.trackHands.get() or True:
-            # frame = handTracker.getFrame()
-            frame.flags.writeable = False
-            self.resultHand = self.hands.process(frame)
-
+        if self.tracking:
             # Draw the hand annotations on the image.
             frame.flags.writeable = True
+            self.resultHand = self.hands.process(frame)
             if self.resultHand.multi_hand_landmarks:
                 for hand_landmarks in self.resultHand.multi_hand_landmarks:
                     mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-                    if self.cursor.get():
-                        # Mark index as reference
-                        index_finger_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-                        x, y = int(index_finger_tip.x * frame.shape[1]), int(index_finger_tip.y * frame.shape[0])
-                        cv.circle(frame, (x, y), 5, (0, 255, 0), -1)
-                    elif self.recog.get():
-                        # Mark thumb as reference
-                        thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
-                        x, y = int(thumb_tip.x * frame.shape[1]), int(thumb_tip.y * frame.shape[0])
-                        cv.circle(frame, (x, y), 5, (0, 255, 0), -1)
-
-        if self.showFPS.get():
-            cv.putText(frame, str(int(fps)), (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
-
-        if self.resultHand and self.cursor.get():
-            if self.resultHand.multi_hand_landmarks:
-                # landmark_list = self.resultHand.multi_hand_landmarks[0]
-                for hand_landmarks in self.resultHand.multi_hand_landmarks:
-                    index_finger_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-                    win32api.SetCursorPos((int(self.displayW * index_finger_tip.x),
-                                           int(self.displayH * index_finger_tip.y)))
-
-        if self.resultHand:
-            if self.resultHand.multi_hand_landmarks:
-                origin = ()
+                xs, ys, zs = [], [], []
                 data = []
                 landmark_list = self.resultHand.multi_hand_landmarks[0]
                 for idx, landmark in enumerate(landmark_list.landmark):
+                    xs.append(landmark.x)
+                    ys.append(landmark.y)
+                    zs.append(landmark.z)
+
+                minx, maxx = np.min(xs), np.max(xs)
+                miny, maxy = np.min(ys), np.max(ys)
+                minz, maxz = np.min(zs), np.max(zs)
+
+                point1 = (minx, miny, minz)
+                point2 = (maxx, maxy, maxz)
+
+                longest_length = self.distance(point1, point2)
+
+                for idx, (x, y, z) in enumerate(zip(xs, ys, zs)):
                     if idx == 0:
-                        origin = (landmark.x, landmark.y, landmark.z)
+                        origin = (x, y, z)
                     else:
-                        x, y, z = (landmark.x, landmark.y, landmark.z)
-                        dist = self.distance_from_wrist((x, y, z), origin)
-                        data.append(dist)
+                        dist = self.distance((x, y, z), origin)
+                        norm_dist = dist / longest_length
+                        data.append(norm_dist)
 
                 self.labelText.set(self.classifier.identify(data)[0])
+            else:
+                self.labelText.set("")
+        else:
+            self.labelText.set("")
+
+        if self.showFPS.get():
+            cv.putText(frame, str(int(fps)), (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
 
         img = Image.fromarray(frame)
 

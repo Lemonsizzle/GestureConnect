@@ -12,7 +12,7 @@ print(df.describe(include='all'))
 df.dropna(inplace=True)
 
 # Remove "thumbs up" for now because it's just ruining rock classification
-df = df[~df.apply(lambda row: row.astype(str).str.contains('tu').any(), axis=1)]
+#df = df[~df.apply(lambda row: row.astype(str).str.contains('tu').any(), axis=1)]
 
 cols = df.columns
 print(cols)
