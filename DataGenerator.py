@@ -78,9 +78,6 @@ class Display(Tk):
         self.hFlip = IntVar()
         self.vFlip = IntVar()
 
-        # Interaction variables
-        self.recog = IntVar()
-
         self.hands = mp_hands.Hands(model_complexity=0,
                                     min_detection_confidence=0.5,
                                     min_tracking_confidence=0.8)
@@ -97,17 +94,9 @@ class Display(Tk):
                       pady=10)
         label.grid(row=1, column=0)
 
-        slider = Scale(self, from_=0.0, to=0.08, resolution=0.01, orient=HORIZONTAL, variable=self.tolerance,
-                       label="Tolerance")
-        slider.grid(row=2, column=0)
-
-        # Tracking group
-        trackOptions = Frame(self)
-        trackOptions.grid(row=3, column=0)
-
         # Macro recording group
         classButtons = Frame(self)
-        classButtons.grid(row=4, column=0)
+        classButtons.grid(row=2, column=0)
 
         # Buttons for recording macros
         Button(classButtons, text="Rock", command=lambda: self.record("rock")).grid(row=0, column=0, sticky=W)
@@ -116,21 +105,6 @@ class Display(Tk):
         Button(classButtons, text="Thumbs Up", command=lambda: self.record("tu")).grid(row=0, column=3, sticky=W)
         Button(classButtons, text="Gun", command=lambda: self.record("gun")).grid(row=0, column=4, sticky=W)
         Button(classButtons, text="Point", command=lambda: self.record("point")).grid(row=0, column=5, sticky=W)
-
-    def rotate_points(self, points, theta, origin):
-        ox, oy = origin
-        theta = math.radians(theta)  # convert degrees to radians
-
-        rotated_points = ()
-
-        x = points[0]
-        y = points[1]
-
-        qx = ox + math.cos(theta) * (x - ox) - math.sin(theta) * (y - oy)
-        qy = oy + math.sin(theta) * (x - ox) + math.cos(theta) * (y - oy)
-        rotated_points = (qx, qy)
-
-        return rotated_points
 
     def distance(self, point1, point2):
         x1, y1, z1 = point1
@@ -168,18 +142,6 @@ class Display(Tk):
                         norm_dist = dist / longest_length
                         data_points.append(norm_dist)
 
-                """for idx, landmark in enumerate(landmark_list.landmark):
-                    if idx == 0:
-                        data_points.append(landmark.x)
-                        data_points.append(landmark.y)
-                        data_points.append(landmark.z)
-                    else:
-                        x, y, z = (landmark.x, landmark.y, landmark.z)
-                        dist = self.distance_from_wrist((x, y, z), (data_points[1], data_points[2], data_points[3]))
-                        data_points.append(dist)"""
-
-                print(data_points)
-
                 with open(self.csv_file, 'a+', newline='') as file:
                     writer = csv.writer(file)
                     writer.writerow(data_points)
@@ -205,8 +167,6 @@ class Display(Tk):
         if not self.hFlip.get():
             frame = cv.flip(frame, 1)
 
-        # frame = handTracker.getFrame()
-        frame.flags.writeable = False
         self.resultHand = self.hands.process(frame)
 
         # Draw the hand annotations on the image.
@@ -222,30 +182,6 @@ class Display(Tk):
 
         if self.showFPS.get():
             cv.putText(frame, str(int(fps)), (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
-
-        if self.resultHand and self.recog.get():
-            if self.resultHand.multi_hand_landmarks:
-                thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
-                thumb_tip_x, thumb_tip_y = thumb_tip.x, thumb_tip.y
-                ring_tip = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
-                ring_tip_x, ring_tip_y = ring_tip.x, ring_tip.y
-                ring_middle = hand_landmarks.landmark[14]
-                ring_middle_x, ring_middle_y = ring_middle.x, ring_middle.y
-
-                ring_x = (ring_middle_x + ring_tip_x) / 2
-                ring_y = (ring_middle_y + ring_tip_y) / 2
-
-                x, y = int(ring_x * frame.shape[1]), int(ring_y * frame.shape[0])
-
-                cv.circle(frame, (x, y), 5, (0, 255, 0), -1)
-
-                distance = math.sqrt((ring_x - thumb_tip_x) ** 2 + (ring_y - thumb_tip_y) ** 2)
-                if distance < self.tolerance.get():
-                    self.labelText.set("Scissors")
-                else:
-                    self.labelText.set("Nothing")
-            else:
-                self.labelText.set("Nothing")
 
         img = Image.fromarray(frame)
 
