@@ -13,16 +13,43 @@ from ThreadedCamera import Camera
 
 import mediapipe as mp
 
-import win32api
-
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
 
 
 class Display(Tk):
+    """
+    A GUI application for real-time hand gesture recording.
+
+    Attributes
+    ----------
+    fps : int
+        The frame rate at which the application captures and processes video frames.
+
+    Methods
+    -------
+    __init__():
+        Initializes an instance of the Display class.
+    __initVariables():
+        Initializes the instance attributes.
+    __addComponents():
+        Adds widgets to the application window.
+    distance(point1, point2):
+        Calculates the Euclidean distance between two points.
+    record(shape):
+        Records the current hand gesture and saves it to a CSV file.
+    onClose():
+        Stops the camera and destroys the application window.
+    run():
+        Starts the application's main loop.
+    """
+
     fps = 30
 
     def __init__(self):
+        """
+        Initializes an instance of the Display class.
+        """
         super().__init__()
         # Create an instance of TKinter Window or frame
         self.title = "Interface"
@@ -43,7 +70,7 @@ class Display(Tk):
         if not os.path.exists(self.csv_file):
             with open(self.csv_file, 'w', newline='') as file:
                 writer = csv.writer(file)
-                columns = ['class', 'wrist_x', 'wrist_y', 'wrist_z',
+                columns = ['class',
                            'thumb_cmc_dist', 'thumb_mcp_dist',
                            'thumb_dip_dist', 'thumb_tip_dist',
                            'index_cmc_dist', 'index_mcp_dist',
@@ -64,8 +91,9 @@ class Display(Tk):
         self.mainloop()
 
     def __initVariables(self):
-        self.displayW, self.displayH = win32api.GetSystemMetrics(0), win32api.GetSystemMetrics(1)
-
+        """
+        Initializes the instance attributes.
+        """
         self.pTime = time.time()
 
         self.labelText = StringVar()
@@ -85,6 +113,9 @@ class Display(Tk):
         self.resultHand = None
 
     def __addComponents(self):
+        """
+        Adds widgets to the application window.
+        """
         label = Label(self,
                       textvariable=self.labelText,
                       font=("Arial", 16),
@@ -107,21 +138,47 @@ class Display(Tk):
         Button(classButtons, text="Point", command=lambda: self.record("point")).grid(row=0, column=5, sticky=W)
 
     def distance(self, point1, point2):
+        """
+        Calculates the Euclidean distance between two points.
+
+        Parameters
+        ----------
+        point1 : tuple
+            The coordinates of the first point.
+        point2 : tuple
+            The coordinates of the second point.
+
+        Returns
+        -------
+        float
+            The Euclidean distance between the two points.
+        """
         x1, y1, z1 = point1
         x2, y2, z2 = point2
         return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
 
     def record(self, shape):
+        """
+        Records the current hand gesture and saves it to a CSV file.
+
+        Parameters
+        ----------
+        shape : str
+            The name of the hand gesture.
+        """
 
         if self.resultHand:
             if self.resultHand.multi_hand_landmarks:
+                wrist = ()
                 xs, ys, zs = [], [], []
-                data_points = [shape]
+                data = [shape]
                 landmark_list = self.resultHand.multi_hand_landmarks[0]
                 for idx, landmark in enumerate(landmark_list.landmark):
                     xs.append(landmark.x)
                     ys.append(landmark.y)
                     zs.append(landmark.z)
+                    if idx == 0:
+                        wrist = (xs[0], ys[0], zs[0])
 
                 minx, maxx = np.min(xs), np.max(xs)
                 miny, maxy = np.min(ys), np.max(ys)
@@ -133,25 +190,27 @@ class Display(Tk):
                 longest_length = self.distance(point1, point2)
 
                 for idx, (x, y, z) in enumerate(zip(xs, ys, zs)):
-                    if idx == 0:
-                        data_points.append(x)
-                        data_points.append(y)
-                        data_points.append(z)
-                    else:
-                        dist = self.distance((x, y, z), (data_points[1], data_points[2], data_points[3]))
+                    if idx > 0:
+                        dist = self.distance((x, y, z), wrist)
                         norm_dist = dist / longest_length
-                        data_points.append(norm_dist)
+                        data.append(norm_dist)
 
                 with open(self.csv_file, 'a+', newline='') as file:
                     writer = csv.writer(file)
-                    writer.writerow(data_points)
+                    writer.writerow(data)
 
     def onClose(self):
+        """
+        Stops the camera and destroys the application window.
+        """
         # if messagebox.askokcancel("Quit", "Do you want to quit?"):
         self.camera.stop()
         self.destroy()
 
     def run(self):
+        """
+        Starts the application's main loop.
+        """
         ret = None
 
         while ret is None:

@@ -23,7 +23,7 @@ class HPI:
         prediction = self.model.predict(df)
         probability = self.model.predict_proba(df)
         if probability.max() < 0.3:
-            prediction = "N//A"
+            prediction = "NONE"
         return prediction
 
 
