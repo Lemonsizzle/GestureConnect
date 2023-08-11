@@ -2,7 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+<<<<<<< HEAD
       <module fileurl="file://$PROJECT_DIR$/.idea/Gesture Connect.iml" filepath="$PROJECT_DIR$/.idea/Gesture Connect.iml" />
+=======
+      <module fileurl="file://$PROJECT_DIR$/.idea/Gesture Connect Flask.iml" filepath="$PROJECT_DIR$/.idea/Gesture Connect Flask.iml" />
+>>>>>>> fbd6065 (Converted app to utilize flask instead of tkinter for interfacing)
     </modules>
   </component>
 </project>

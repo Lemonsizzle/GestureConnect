@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Flask OpenCV App</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='scss/style.css') }}"
+    />
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+    {#
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    #}
+  </head>
+  <body>
+    <button class="button" onclick="test()">Test</button>
+    <img id="live" src="{{ url_for('video_feed') }}" />
+
+    <div class="tabs">
+      <button class="button tab-button active" onclick="showTab(0)">Function</button>
+      <button class="button tab-button" onclick="showTab(1)">Trainer</button>
+      <button class="button tab-button" onclick="showTab(2)">Settings</button>
+    </div>
+
+    <div class="tab-content">
+      <div class="tab-pane active">
+        <input
+          type="radio"
+          id="off"
+          name="state"
+          value="off"
+          onclick="functionSelected(this.value)"
+          checked
+        />
+        <label for="off">Off</label>
+        <input
+          type="radio"
+          id="on"
+          name="state"
+          value="on"
+          onclick="functionSelected(this.value)"
+        />
+        <label for="on">On</label>
+        <input
+          type="radio"
+          id="rps"
+          name="state"
+          value="rps"
+          onclick="functionSelected(this.value)"
+        />
+        <label for="rps">RPS</label>
+      </div>
+
+      <div class="tab-pane">
+        {# todo: implement buttons for recording, also js for generating buttons
+        based on classes #}
+        <input
+          type="button"
+          id="rock"
+          name="rock"
+          value="rock"
+          onclick="functionSelected(this.value)"
+        />
+      </div>
+
+      <div class="tab-pane">
+        <label for="cam_src">Camera Source </label>
+        <input type="text" id="cam_src" name="cam_src" value="0" />
+        <input
+          type="button"
+          class="button"
+          id="cam_src_btn"
+          name="cam_src_btn"
+          value="Connect"
+          onclick="changeSource()"
+        />
+        <br />
+
+        <input
+          type="checkbox"
+          id="fps"
+          name="fps"
+          value="on"
+          onclick="postData()"
+        />
+        <label for="fps"> FPS Counter</label>
+
+        <input
+          type="checkbox"
+          id="hflip"
+          name="hflip"
+          value="on"
+          onclick="postData()"
+        />
+        <label for="hflip"> Horizontal Flip</label>
+
+        <input
+          type="checkbox"
+          id="vflip"
+          name="vflip"
+          value="on"
+          onclick="postData()"
+        />
+        <label for="vflip"> Vertical Flip</label>
+      </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>

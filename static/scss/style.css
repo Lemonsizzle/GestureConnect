@@ -1,0 +1,47 @@
+body {
+  background: #222;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: cyan;
+}
+
+/* If you are using any images or divs that you also want to center */
+img,
+div {
+  margin: 0 auto;
+}
+
+.button {
+  border: none;
+  background-color: #444;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  padding: 5px;
+  color: cyan;
+}
+.button:hover {
+  background-color: #3a3a3a;
+}
+
+.tabs .tab-button {
+  padding: 10px 15px;
+}
+.tabs .tab-button:hover {
+  background-color: #3a3a3a;
+}
+.tabs .tab-button.active {
+  background-color: #333;
+}
+
+.tab-content .tab-pane {
+  display: none;
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+.tab-content .tab-pane.active {
+  display: block;
+}
+
+/*# sourceMappingURL=style.css.map */
