@@ -15,7 +15,6 @@ import HandModelMaker as HMM
 import GCDatabase
 from GCWindows import WindowsControl
 from flask import Flask, render_template, Response, request, jsonify, abort
-from flask_socketio import SocketIO
 from google.protobuf.json_format import MessageToDict
 from collections import deque
 
@@ -24,7 +23,6 @@ mp_hands = mp.solutions.hands
 mp_face = mp.solutions.face_mesh
 
 app = Flask(__name__)
-socketio = SocketIO(app)
 
 db = GCDatabase.database("data.db")
 

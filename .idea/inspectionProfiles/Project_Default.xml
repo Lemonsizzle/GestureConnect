@@ -1,32 +1,10 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
-<<<<<<< HEAD
-=======
-    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="ignoredPackages">
-        <value>
-          <list size="7">
-            <item index="0" class="java.lang.String" itemvalue="pandas" />
-            <item index="1" class="java.lang.String" itemvalue="mediapipe" />
-            <item index="2" class="java.lang.String" itemvalue="scikit_learn" />
-            <item index="3" class="java.lang.String" itemvalue="matplotlib" />
-            <item index="4" class="java.lang.String" itemvalue="numpy" />
-            <item index="5" class="java.lang.String" itemvalue="opencv_python" />
-            <item index="6" class="java.lang.String" itemvalue="Pillow" />
-          </list>
-        </value>
-      </option>
-    </inspection_tool>
->>>>>>> fbd6065 (Converted app to utilize flask instead of tkinter for interfacing)
     <inspection_tool class="PyPep8NamingInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
       <option name="ignoredErrors">
         <list>
           <option value="N802" />
-<<<<<<< HEAD
-=======
-          <option value="N801" />
->>>>>>> fbd6065 (Converted app to utilize flask instead of tkinter for interfacing)
         </list>
       </option>
     </inspection_tool>

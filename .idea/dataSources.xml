@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="data" uuid="37bdc2b8-e670-431d-9149-8cce231669ec">
+    <data-source source="LOCAL" name="data" uuid="12e1f1e9-72e2-4b55-bd52-ef3676c2a5ab">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:E:\Gesture Connect Flask\data.db</jdbc-url>
+      <jdbc-url>jdbc:sqlite:E:\GestureConnect\data.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
       <libraries>
         <library>

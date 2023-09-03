@@ -6,6 +6,7 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='scss/style.css') }}"
     />
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
@@ -14,16 +15,19 @@
     #}
   </head>
   <body>
-    <button class="button" onclick="test()">Test</button>
+    <button id="quit-btn" class="button quit-btn" onclick="tabClosed()">Back</button>
+
     <img id="live" src="{{ url_for('video_feed') }}" />
 
     <div class="tabs">
-      <button class="button tab-button active" onclick="showTab(0)">Function</button>
+      <button class="button tab-button active" onclick="showTab(0)">
+        Function
+      </button>
       <button class="button tab-button" onclick="showTab(1)">Trainer</button>
       <button class="button tab-button" onclick="showTab(2)">Settings</button>
     </div>
 
-    <div class="tab-content">
+    <div class="tab-content" id="function-pane">
       <div class="tab-pane active">
         <input
           type="radio"
@@ -49,22 +53,24 @@
           value="rps"
           onclick="functionSelected(this.value)"
         />
-        <label for="rps">RPS</label>
+        <label for="rps">RPS</label><br />
+        <button class="button" onclick=changePage("/configuration")>Configure Functions</button>
       </div>
 
-      <div class="tab-pane">
-        {# todo: implement buttons for recording, also js for generating buttons
-        based on classes #}
+      <div class="tab-pane" id="trainer-pane">
+        {% for class in classes %}
         <input
           type="button"
-          id="rock"
-          name="rock"
-          value="rock"
-          onclick="functionSelected(this.value)"
+          class="button"
+          id="{{ class[0] }}"
+          name="{{ class[0] }}"
+          value="{{ class[0] }}"
+          onclick="record(this.value)"
         />
+        {% endfor %}
       </div>
 
-      <div class="tab-pane">
+      <div class="tab-pane" id="settings-pane">
         <label for="cam_src">Camera Source </label>
         <input type="text" id="cam_src" name="cam_src" value="0" />
         <input
@@ -105,6 +111,5 @@
         <label for="vflip"> Vertical Flip</label>
       </div>
     </div>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   </body>
 </html>
