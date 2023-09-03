@@ -4,9 +4,11 @@ import sqlite3
 
 class database:
     def __init__(self, name):
+        self.name = name
+
         # Establish the database connection and get a cursor
-        self.conn = sqlite3.connect(name)
-        self.cur = self.conn.cursor()
+        conn = sqlite3.connect(self.name)
+        cur = conn.cursor()
 
         query = f'''CREATE TABLE IF NOT EXISTS static_data (
                                 id INTEGER PRIMARY KEY,
@@ -34,25 +36,34 @@ class database:
                             );
                         '''
 
-        self.cur.execute(query)
-        self.conn.commit()
-
-    def stop(self):
-        self.conn.close()
+        cur.execute(query)
+        conn.commit()
+        conn.close()
 
     def getClasses(self):
+        # Establish the database connection and get a cursor
+        conn = sqlite3.connect(self.name)
+        cur = conn.cursor()
+
         # Execute the SQL statement
-        self.cur.execute("SELECT DISTINCT class FROM static_data")
+        cur.execute("SELECT DISTINCT class FROM static_data")
 
         # Fetch all the rows
-        rows = self.cur.fetchall()
+        rows = cur.fetchall()
+
+        conn.commit()
+        conn.close()
 
         # Extract the unique values and return them
-        return [row[0] for row in rows]
+        return [row for row in rows]
 
     def addEntry(self, data):
         if not len(data):
             return
+
+        # Establish the database connection and get a cursor
+        conn = sqlite3.connect(self.name)
+        cur = conn.cursor()
 
         values = "?"
         values += ", ?" * (len(data) - 1)
@@ -83,13 +94,13 @@ class database:
                 );
                 '''
 
-        self.cur.execute(query, data)
+        cur.execute(query, data)
 
-        self.conn.commit()
+        conn.commit()
+        conn.close()
 
 
 if __name__ == "__main__":
     db = database("test.db")
     data = [10, 50, 35]
     db.addEntry(data)
-    db.stop()
