@@ -149,10 +149,6 @@ def distance(point, origin):
     float
         The Euclidean distance between the two points.
     """
-    if len(point) == 3:
-        x1, y1, z1 = point
-        x2, y2, z2 = origin
-        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
     if len(point) == 2:
         x1, y1 = point
         x2, y2 = origin
@@ -173,28 +169,26 @@ def record():
     if resultHand:
         if resultHand.multi_hand_landmarks:
             wrist = ()
-            xs, ys, zs = [], [], []
+            xs, ys = [], []
             data = [shape]
             landmark_list = resultHand.multi_hand_landmarks[0]
             for idx, landmark in enumerate(landmark_list.landmark):
                 xs.append(landmark.x)
                 ys.append(landmark.y)
-                zs.append(landmark.z)
                 if idx == 0:
-                    wrist = (xs[0], ys[0], zs[0])
+                    wrist = (xs[0], ys[0])
 
             minx, maxx = np.min(xs), np.max(xs)
             miny, maxy = np.min(ys), np.max(ys)
-            minz, maxz = np.min(zs), np.max(zs)
 
-            point1 = (minx, miny, minz)
-            point2 = (maxx, maxy, maxz)
+            point1 = (minx, miny)
+            point2 = (maxx, maxy)
 
             longest_length = distance(point1, point2)
 
-            for idx, (x, y, z) in enumerate(zip(xs, ys, zs)):
+            for idx, (x, y) in enumerate(zip(xs, ys)):
                 if idx > 0:
-                    dist = distance((x, y, z), wrist)
+                    dist = distance((x, y), wrist)
                     norm_dist = dist / longest_length
                     data.append(norm_dist)
 
@@ -287,27 +281,25 @@ def process(frame, times):
 
             for hand_idx, landmark_list in enumerate(resultHand.multi_hand_landmarks):
                 wrist = ()
-                xs, ys, zs = [], [], []
+                xs, ys = [], []
                 distances = []
 
                 for idx, landmark in enumerate(landmark_list.landmark):
                     xs.append(landmark.x)
                     ys.append(landmark.y)
-                    zs.append(landmark.z)
                     if not idx:
-                        wrist = (xs[0], ys[0], zs[0])
+                        wrist = (xs[0], ys[0])
 
                 minx, maxx = np.min(xs), np.max(xs)
                 miny, maxy = np.min(ys), np.max(ys)
-                minz, maxz = np.min(zs), np.max(zs)
 
-                min_point = (minx, miny, minz)
-                max_point = (maxx, maxy, maxz)
+                min_point = (minx, miny)
+                max_point = (maxx, maxy)
 
                 longest_length = distance(min_point, max_point)
 
-                for (x, y, z) in zip(xs, ys, zs):
-                    dist = distance((x, y, z), wrist)
+                for (x, y) in zip(xs, ys):
+                    dist = distance((x, y), wrist)
                     norm_dist = dist / longest_length
                     distances.append(norm_dist)
 
@@ -320,19 +312,19 @@ def process(frame, times):
 
                 key_data = {
                     "wrist": wrist,
-                    "thumb": (xs[4], ys[4], zs[4]),
-                    "index": (xs[8], ys[8], zs[8]),
-                    "middle": (xs[12], ys[12], zs[12]),
-                    "ring": (xs[16], ys[16], zs[16]),
-                    "pinky": (xs[20], ys[20], zs[20]),
+                    "thumb": (xs[4], ys[4]),
+                    "index": (xs[8], ys[8]),
+                    "middle": (xs[12], ys[12]),
+                    "ring": (xs[16], ys[16]),
+                    "pinky": (xs[20], ys[20]),
                     "fingers": get_finger_positions(distances)
                 }
 
                 pinch_distance = distance(key_data["thumb"], key_data["index"])
 
-                x, y = key_data["thumb"][:-1]
+                x, y = key_data["thumb"]
                 relative_thumb = (int(x * frame_w), int(y * frame_h))
-                x, y = key_data["index"][:-1]
+                x, y = key_data["index"]
                 relative_index = (int(x * frame_w), int(y * frame_h))
 
                 cv2.line(frame, relative_thumb, relative_index, color=(255, 0, 0), thickness=2)
