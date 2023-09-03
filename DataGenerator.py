@@ -63,8 +63,10 @@ class Display(Tk):
         self.viewport = Label(self)
         self.viewport.grid(row=0)
 
-        self.camera = Camera(0)
+        self.camera = Camera("http://192.168.1.55:8000")
         self.camera.start()
+
+        self.temporal_data = []
 
         self.csv_file = 'data.csv'
         if not os.path.exists(self.csv_file):
@@ -136,6 +138,27 @@ class Display(Tk):
         Button(classButtons, text="Thumbs Up", command=lambda: self.record("tu")).grid(row=0, column=3, sticky=W)
         Button(classButtons, text="Gun", command=lambda: self.record("gun")).grid(row=0, column=4, sticky=W)
         Button(classButtons, text="Point", command=lambda: self.record("point")).grid(row=0, column=5, sticky=W)
+        Button()
+
+        dynamicButtons = Frame(self)
+        dynamicButtons.grid(row=3, column=0)
+
+        # Buttons for recording macros
+        Button(dynamicButtons, text="Snap", command=lambda: self.dynamic(0)).grid(row=0, column=0, sticky=W)
+        Button(dynamicButtons, text="Delete", command=lambda: self.dynamic(1)).grid(row=0, column=0, sticky=W)
+        Button(dynamicButtons, text="Save", command=lambda: self.dynamic(2)).grid(row=0, column=0, sticky=W)
+        Button(dynamicButtons, text="Clear", command=lambda: self.dynamic(3)).grid(row=0, column=0, sticky=W)
+
+
+    def dynamic(self, function):
+        if function == 0:
+            pass
+        elif function == 1:
+            self.temporal_data.pop()
+        elif function == 2:
+            pass
+        elif function == 3:
+            self.temporal_data = []
 
     def distance(self, point1, point2):
         """
@@ -157,12 +180,13 @@ class Display(Tk):
         x2, y2, z2 = point2
         return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
 
-    def record(self, shape):
+    def record(self, shape, is_temporal=False):
         """
         Records the current hand gesture and saves it to a CSV file.
 
         Parameters
         ----------
+        is_temporal
         shape : str
             The name of the hand gesture.
         """
@@ -194,10 +218,12 @@ class Display(Tk):
                         dist = self.distance((x, y, z), wrist)
                         norm_dist = dist / longest_length
                         data.append(norm_dist)
-
-                with open(self.csv_file, 'a+', newline='') as file:
-                    writer = csv.writer(file)
-                    writer.writerow(data)
+                if is_temporal:
+                    self.temporal_data.append(data)
+                else:
+                    with open(self.csv_file, 'a+', newline='') as file:
+                        writer = csv.writer(file)
+                        writer.writerow(data)
 
     def onClose(self):
         """

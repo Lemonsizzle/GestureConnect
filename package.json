@@ -1,5 +1,18 @@
+
 {
+  "name": "your-app",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
   "dependencies": {
-    "prettier": "^3.0.0"
+    "electron": "^latest-version"
+  },
+
+  "dependencies": {
+    "electron": "^26.1.0",
+    "prettier": "^3.0.0",
+    "sqlite3": "^5.1.6"
   }
 }

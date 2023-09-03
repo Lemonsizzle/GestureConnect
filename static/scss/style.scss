@@ -1,40 +1,4 @@
-$main-bg: #222;
-$second-bg: #333;
-$primary: cyan;
-
-$inactive-bg: #444;
-$hover-bg: #3a3a3a;
-$active-bg: #333;
-$border-color: #e0e0e0;
-
-body {
-  background: $main-bg;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  color: $primary;
-}
-
-/* If you are using any images or divs that you also want to center */
-img,
-div {
-  margin: 0 auto;
-}
-
-.button {
-  border: none;
-  background-color: $inactive-bg;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  padding: 5px;
-  color: $primary;
-
-  &:hover {
-    background-color: $hover-bg;
-  }
-}
+@import 'base';
 
 .tabs {
   .tab-button {

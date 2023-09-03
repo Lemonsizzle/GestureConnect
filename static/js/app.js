@@ -1,3 +1,26 @@
+window.onload = function () {};
+
+window.onunload = function() {
+  alert("The page is being unloaded.");
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "/close", true);
+  xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  /*xhr.onreadystatechange = function () {
+    if (this.readyState == 4 && this.status == 200) {
+      var response = JSON.parse(this.responseText);
+      alert(response.message);
+    }
+  };*/
+
+  xhr.send("data=" + "unloaded");
+};
+
+
+function changePage(page) {
+  window.location.href = page;
+}
+
 function showTab(index) {
   var buttons = document.querySelectorAll(".tab-button");
   var panes = document.querySelectorAll(".tab-pane");
@@ -33,20 +56,6 @@ function getCameraSources() {
   }
 }
 
-function populateClasses() {
-  // todo: populate buttons in second tab-pane based on database class (and another for new classes)
-  // todo: add ids to the tab-panes
-
-  // Generate buttons for recording macros
-  /*classes = self.db.getClasses()
-  rowlen = 4
-  buttons = []
-  for idx, c in enumerate(classes):
-      b = Button(class_buttons, text=c, command=lambda: self.record(c.lower()))
-      b.grid(row=idx//rowlen, column=idx%rowlen, sticky=W)
-      buttons.append(b)*/
-}
-
 function record(btn) {
   var xhr = new XMLHttpRequest();
   xhr.open("POST", "/record", true);
@@ -73,10 +82,6 @@ function functionSelected(choice) {
   };*/
   xhr.send("choice=" + choice);
 }
-
-window.addEventListener("beforeunload", function (e) {
-  tabClosed();
-});
 
 function tabClosed() {
   var xhr = new XMLHttpRequest();
@@ -144,5 +149,4 @@ function changeSource() {
 
 function test() {
   getCameraSources();
-  return;
 }
