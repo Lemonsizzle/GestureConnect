@@ -2,10 +2,10 @@
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
     <data-source source="LOCAL" name="data" uuid="12e1f1e9-72e2-4b55-bd52-ef3676c2a5ab">
-      <driver-ref>sqlite.xerial</driver-ref>
+      <driver-ref>1dfbc7d8-8bd5-45c0-865d-119cfa8d588b</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:E:\GestureConnect\data.db</jdbc-url>
+      <jdbc-url>jdbc:sqlite:D:\GestureConnect\data.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
       <libraries>
         <library>
