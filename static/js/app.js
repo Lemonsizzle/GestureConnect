@@ -56,9 +56,43 @@ function getCameraSources() {
   }
 }
 
+function undo() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "/db/undo", true);
+  xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  /*xhr.onreadystatechange = function () {
+    if (this.readyState == 4 && this.status == 200) {
+      var response = JSON.parse(this.responseText);
+      alert(response.message);
+    }
+  };*/
+
+  xhr.send();
+}
+
+function remove(btn) {
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "/db/remove", true);
+  xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  /*xhr.onreadystatechange = function () {
+    if (this.readyState == 4 && this.status == 200) {
+      var response = JSON.parse(this.responseText);
+      alert(response.message);
+    }
+  };*/
+
+  xhr.send("shape=" + btn);
+
+  // Assuming there is an element in your HTML like this: <div id="myElement">Hello</div>
+  var element = document.getElementById(btn);
+  if (element) {
+    element.remove();
+  }
+}
+
 function record(btn) {
   var xhr = new XMLHttpRequest();
-  xhr.open("POST", "/record", true);
+  xhr.open("POST", "/db/record", true);
   xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
   /*xhr.onreadystatechange = function () {
     if (this.readyState == 4 && this.status == 200) {
@@ -138,7 +172,7 @@ function changeSource() {
 
   console.log(src);
 
-  if (src == "") {
+  if (src === "") {
     console.log("Invalid Source");
     return;
   }

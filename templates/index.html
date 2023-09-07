@@ -15,7 +15,9 @@
     #}
   </head>
   <body>
-    <button id="quit-btn" class="button quit-btn" onclick="tabClosed()">Back</button>
+    <button id="quit-btn" class="button quit-btn" onclick="tabClosed()">
+      Back
+    </button>
 
     <img id="live" src="{{ url_for('video_feed') }}" />
 
@@ -54,20 +56,28 @@
           onclick="functionSelected(this.value)"
         />
         <label for="rps">RPS</label><br />
-        <button class="button" onclick=changePage("/configuration")>Configure Functions</button>
+        <button class="button" onclick="changePage('/configuration')">
+          Configure Functions
+        </button>
       </div>
 
       <div class="tab-pane" id="trainer-pane">
+        <h3>Left click to train, right click to delete</h3>
         {% for class in classes %}
-        <input
-          type="button"
+        <button
           class="button"
           id="{{ class[0] }}"
-          name="{{ class[0] }}"
           value="{{ class[0] }}"
           onclick="record(this.value)"
-        />
+          oncontextmenu="remove(this.value); return false;"
+        >
+          {{ class[0] }}
+        </button>
         {% endfor %}
+        <br />
+      <button class="button" onclick="undo()">
+        Undo
+      </button>
       </div>
 
       <div class="tab-pane" id="settings-pane">
