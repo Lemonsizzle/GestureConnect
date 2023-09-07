@@ -9,9 +9,8 @@ import json
 import cv2
 import mediapipe as mp
 import numpy as np
-from HandPositionIdentifier import HPI
+import GCML
 from RPS import RPS
-import HandModelMaker as HMM
 import GCDatabase
 from GCWindows import WindowsControl
 from flask import Flask, render_template, Response, request, jsonify, abort
@@ -28,9 +27,20 @@ db = GCDatabase.database("data.db")
 
 control_win = WindowsControl()
 
-cap = cv2.VideoCapture(0)
+config_name = "config.json"
+config_data = {}
 
-classifier = HPI()
+if os.path.exists(config_name):
+    with open(config_name, 'r+') as config_file:
+        config_content = config_file.read()
+        if config_content and 'src' in config_content:
+            config_data = json.loads(config_content)
+            cap = cv2.VideoCapture(config_data['src'])
+
+if not cap.isOpened():
+    cap = cv2.VideoCapture(0)
+
+ml_manager = GCML.MLManager()
 
 RPS_game = RPS()
 
@@ -46,16 +56,6 @@ v_flip = False
 
 mode = "off"
 
-config_name = "config.json"
-config_data = {}
-
-if os.path.exists(config_name):
-    with open(config_name, 'r+') as config_file:
-        config_content = config_file.read()
-        if config_content and 'src' in config_content:
-            config_data = json.loads(config_content)
-            cap = cv2.VideoCapture(config_data['src'])
-
 lock = threading.Lock()
 
 """# "time":0, maybe
@@ -66,7 +66,6 @@ lock = threading.Lock()
     "ring": [],
     "pinky": [],
     "finger_pos": []"""
-#history = []
 history = deque(maxlen=10)
 
 
@@ -114,7 +113,7 @@ def interact():
     return jsonify({"message": f"You selected"})
 
 
-def get_finger_positions(distances):
+def get_finger_positions(distances, thumb_ref_tip, thumb_ref_middle):
     # Initialize a list with False for each finger
     fingers = [False] * 5
 
@@ -122,11 +121,11 @@ def get_finger_positions(distances):
     for i in range(5):
         # if the distance to fingertip is less than distance to second knuckle of finger
         if i:
-            if distances[4 * i + 1] < distances[4 * i + 3]:
+            if distances[4 * i + 2] < distances[4 * i + 4]:
                 fingers[i] = True
-        """else:
-            if distances[4 * i + 1] < distances[4 * i + 3]:
-                fingers[i] = True"""
+        else:
+            if thumb_ref_middle < thumb_ref_tip:
+                fingers[i] = True
 
     return fingers
 
@@ -157,24 +156,43 @@ def distance(point, origin):
         return math.sqrt((x2 - x1) ** 2)
 
 
-@app.route('/record', methods=['POST'])
-def record():
-    global resultHand  # , db
+@app.route('/db/<string:functionName>', methods=['POST'])
+def dbInteractions(functionName):
+    functionDict = {
+        "undo": undo,
+        "remove": remove,
+        "record": record,
+    }
+    return functionDict.get(functionName)()
 
-    # TODO: implement buttons for recording, also js for generating buttons based on classes
+
+def undo():
+    db.undo()
+
+    return jsonify(success=True)
+
+
+def remove():
+    shape = request.form.get('shape')
+    db.removeClass(shape)
+
+    return jsonify(success=True)
+
+
+def record():
+    global resultHand, db
+
     shape = request.form.get('shape')
 
     if resultHand:
         if resultHand.multi_hand_landmarks:
-            wrist = ()
-            xs, ys = [], []
             data = [shape]
-            landmark_list = resultHand.multi_hand_landmarks[0]
-            for idx, landmark in enumerate(landmark_list.landmark):
-                xs.append(landmark.x)
-                ys.append(landmark.y)
-                if idx == 0:
-                    wrist = (xs[0], ys[0])
+
+            smooth_points = tracker.get_smooth_points()
+
+            xs = [x for x, _ in smooth_points]
+            ys = [y for _, y in smooth_points]
+            wrist = (xs[0], ys[0])
 
             minx, maxx = np.min(xs), np.max(xs)
             miny, maxy = np.min(ys), np.max(ys)
@@ -189,8 +207,9 @@ def record():
                     dist = distance((x, y), wrist)
                     norm_dist = dist / longest_length
                     data.append(norm_dist)
-
             db.addEntry(data)
+
+    return jsonify(success=True)
 
 
 def rps(frame, gesture):
@@ -242,6 +261,32 @@ def functions():
             control_win.scroll(120)
 
 
+# Initialize the PointTracker for each landmark point (21 points)
+class PointTracker:
+    def __init__(self, window_size=5):
+        self.window_size = window_size
+        self.points = [deque(maxlen=window_size) for _ in range(21)]
+
+    def add_points(self, points):
+        for i, point in enumerate(points):
+            self.points[i].append(point)
+
+    def get_smooth_points(self):
+        smooth_points = []
+        for deq in self.points:
+            if len(deq) == 0:
+                smooth_points.append(None)
+                continue
+            avg_x = sum(x for x, _ in deq) / len(deq)
+            avg_y = sum(y for _, y in deq) / len(deq)
+            smooth_points.append((avg_x, avg_y))
+        return smooth_points
+
+
+# Create PointTracker instance
+tracker = PointTracker(window_size=5)
+
+
 def process(frame, times):
     global resultHand
 
@@ -282,11 +327,19 @@ def process(frame, times):
                 xs, ys = [], []
                 distances = []
 
-                for idx, landmark in enumerate(landmark_list.landmark):
-                    xs.append(landmark.x)
-                    ys.append(landmark.y)
-                    if not idx:
-                        wrist = (xs[0], ys[0])
+                landmark_points = []
+                for i in range(21):  # 21 landmarks in MediaPipe hand model
+                    x = round(hand_landmarks.landmark[i].x, 2)
+                    y = round(hand_landmarks.landmark[i].y, 2)
+                    landmark_points.append((x, y))
+
+                # Add points to tracker and get smoothed points
+                tracker.add_points(landmark_points)
+                smooth_points = tracker.get_smooth_points()
+
+                xs = [x for x, _ in smooth_points]
+                ys = [y for _, y in smooth_points]
+                wrist = (xs[0], ys[0])
 
                 minx, maxx = np.min(xs), np.max(xs)
                 miny, maxy = np.min(ys), np.max(ys)
@@ -296,17 +349,21 @@ def process(frame, times):
 
                 longest_length = distance(min_point, max_point)
 
-                for (x, y) in zip(xs, ys):
-                    dist = distance((x, y), wrist)
+                for point in zip(xs, ys):
+                    dist = distance(point, wrist)
                     norm_dist = dist / longest_length
                     distances.append(norm_dist)
 
                 if hand_idx == left_hand_idx:
-                    left_gesture = classifier.identify(distances[1:])[0]
+                    left_gesture = ml_manager.identify(distances[1:])[0]
                 if hand_idx == right_hand_idx:
-                    right_gesture = classifier.identify(distances[1:])[0]
+                    right_gesture = ml_manager.identify(distances[1:])[0]
 
-                fingers = get_finger_positions(distances)
+                thumb_ref_point = (xs[13], ys[13])
+                thumb_ref_tip = distance((xs[4], ys[4]), thumb_ref_point) / longest_length
+                thumb_ref_middle = distance((xs[2], ys[2]), thumb_ref_point) / longest_length
+
+                fingers = get_finger_positions(distances, thumb_ref_tip, thumb_ref_middle)
 
                 key_data = {
                     "wrist": wrist,
@@ -315,7 +372,7 @@ def process(frame, times):
                     "middle": (xs[12], ys[12]),
                     "ring": (xs[16], ys[16]),
                     "pinky": (xs[20], ys[20]),
-                    "fingers": get_finger_positions(distances)
+                    "fingers": fingers
                 }
 
                 pinch_distance = distance(key_data["thumb"], key_data["index"])
@@ -333,7 +390,7 @@ def process(frame, times):
 
                 for idx, finger in enumerate(fingers):
                     if finger:
-                        cv2.putText(frame, str(1), (int(xs[4 * idx + 3] * frame_w), int(ys[4 * idx + 3] * frame_h)),
+                        cv2.putText(frame, str(1), (int(xs[4 * idx + 4] * frame_w), int(ys[4 * idx + 4] * frame_h)),
                                     cv2.FONT_HERSHEY_SIMPLEX,
                                     2, (255, 0, 0), 3)
 
@@ -373,10 +430,13 @@ def gen_frames():
 
         with lock:
             ret, frame = cap.read()
+
         if not ret:
             break
 
         # frame_h, frame_w, _ = frame.shape
+        # frame = cv2.resize(frame, (1280, 720))
+        frame = cv2.resize(frame, (854, 480))
 
         frame = process(frame, None)
 
