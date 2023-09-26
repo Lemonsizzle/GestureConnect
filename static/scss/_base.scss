@@ -3,16 +3,23 @@ $second-bg: #333;
 $primary: cyan;
 
 $inactive-bg: #444;
-$hover-bg: #3a3a3a;
+$hover-bg: #383838;
 $active-bg: #333;
 $border-color: #e0e0e0;
 
 .quit-btn {
+  font-size: 20px;
   position: absolute;
   top: 0;
   right: 0;
 }
 
+.back-btn {
+  font-size: 20px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 
 body {
   background: $main-bg;

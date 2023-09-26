@@ -33,12 +33,21 @@ config_data = {}
 if os.path.exists(config_name):
     with open(config_name, 'r+') as config_file:
         config_content = config_file.read()
-        if config_content and 'src' in config_content:
-            config_data = json.loads(config_content)
-            cap = cv2.VideoCapture(config_data['src'])
+        config_data = json.loads(config_content)
+
+if 'src' in config_data['app']:
+    cap = cv2.VideoCapture(config_data['app']['src'])
 
 if not cap.isOpened():
     cap = cv2.VideoCapture(0)
+
+if 'scripts' in config_data['app']:
+    scripts_dir = config_data['app']['scripts']
+else:
+    scripts_dir = "scripts"
+
+if not os.path.exists(scripts_dir):
+    os.mkdir(scripts_dir)
 
 ml_manager = GCML.MLManager()
 
@@ -46,7 +55,7 @@ RPS_game = RPS()
 
 hands = mp_hands.Hands(model_complexity=0,
                        min_detection_confidence=0.5,
-                       min_tracking_confidence=0.8)
+                       min_tracking_confidence=0.6)
 
 resultHand = None
 
@@ -95,7 +104,7 @@ def change_source(src=None):
             cap.release()
         cap = cv2.VideoCapture(src)
 
-    config_data['src'] = src
+    config_data['user_config']['src'] = src
 
     return jsonify(success=True, message=f"Camera source changed to {src}")
 
@@ -238,27 +247,83 @@ def rps(frame, gesture):
             RPS_game.setUserChoice(gesture)
 
 
+def calculateMovement(previous, current):
+    x1, y1 = previous
+    x2, y2 = current
+    # Calculate the raw vector
+    dx = x2 - x1
+    dy = y2 - y1
+
+    # Normalize the vector
+    magnitude = math.sqrt(dx ** 2 + dy ** 2)
+    if magnitude == 0:
+        return (0, 0)
+
+    dx /= magnitude
+    dy /= magnitude
+
+    # Eight possible directions
+    directions = [
+        (1, 0),
+        (1 / math.sqrt(2), 1 / math.sqrt(2)),
+        (0, 1),
+        (-1 / math.sqrt(2), 1 / math.sqrt(2)),
+        (-1, 0),
+        (-1 / math.sqrt(2), -1 / math.sqrt(2)),
+        (0, -1),
+        (1 / math.sqrt(2), -1 / math.sqrt(2))
+    ]
+
+    # Find the closest direction
+    closest_direction = min(directions, key=lambda d: (dx - d[0]) ** 2 + (dy - d[1]) ** 2)
+
+    return closest_direction
+
+
+move_history = deque(maxlen=10)
+
+
 def functions():
     if len(history) < 2:
         return
 
-    current = history[-1]
     previous = history[-2]
+    current = history[-1]
 
     labels = ["thumb", "index", "middle", "ring", "pinky"]
 
-    wrist, thumb, index, middle, ring, pinky, fingers = current.values()
-    prev_wrist, prev_thumb, prev_index, prev_middle, prev_ring, prev_pinky, prev_fingers = previous.values()
+    cur_val = list(current.values())
+    wrist = cur_val[0]
+    cur_fingers = cur_val[1:-1]
+    cur_is_up = cur_val[-1]
 
-    if fingers == [1, 1, 0, 0, 0]:
+    previous_val = list(previous.values())
+    prev_wrist = previous_val[0]
+    prev_fingers = previous_val[1:-1]
+    prev_is_up = previous_val[-1]
+
+    if cur_is_up != prev_is_up:
+        return
+
+    movement_dict = {}
+    for label, cur_finger, prev_finger, is_up in zip(labels, cur_fingers, prev_fingers, cur_is_up):
+        if is_up:
+            movement_dict[label] = calculateMovement(prev_finger, cur_finger)
+    if len(move_history):
+        if movement_dict != move_history[0]:
+            move_history.append(movement_dict)
+    else:
+        move_history.append(movement_dict)
+
+    if cur_is_up == [1, 1, 0, 0, 0]:
         pass
-    if fingers == [1, 1, 1, 1, 1]:
+    elif cur_is_up == [1, 1, 1, 1, 1]:
         pass
-    elif fingers == [0, 1, 1, 0, 0]:
-        if (thumb[1] < prev_thumb[1]) and (index[1] < prev_index[1]):
+    elif cur_is_up == [0, 1, 1, 0, 0]:
+        """if (thumb[1] < prev_thumb[1]) and (index[1] < prev_index[1]):
             control_win.scroll(-120)
         elif (thumb[1] > prev_thumb[1]) and (index[1] > prev_index[1]):
-            control_win.scroll(120)
+            control_win.scroll(120)"""
 
 
 # Initialize the PointTracker for each landmark point (21 points)
@@ -284,11 +349,13 @@ class PointTracker:
 
 
 # Create PointTracker instance
-tracker = PointTracker(window_size=5)
+tracker = PointTracker(window_size=3)
+
+history_delay = 0
 
 
 def process(frame, times):
-    global resultHand
+    global resultHand, history_delay
 
     left_gesture = None
     right_gesture = None
@@ -334,6 +401,8 @@ def process(frame, times):
                     landmark_points.append((x, y))
 
                 # Add points to tracker and get smoothed points
+                smooth_points = landmark_points
+
                 tracker.add_points(landmark_points)
                 smooth_points = tracker.get_smooth_points()
 
@@ -375,16 +444,24 @@ def process(frame, times):
                     "fingers": fingers
                 }
 
-                pinch_distance = distance(key_data["thumb"], key_data["index"])
+                if fingers[0] and fingers[1]:
+                    pinch_distance = distance(key_data["thumb"], key_data["index"])
 
-                x, y = key_data["thumb"]
-                relative_thumb = (int(x * frame_w), int(y * frame_h))
-                x, y = key_data["index"]
-                relative_index = (int(x * frame_w), int(y * frame_h))
+                    x, y = key_data["thumb"]
+                    relative_thumb = (int(x * frame_w), int(y * frame_h))
+                    x, y = key_data["index"]
+                    relative_index = (int(x * frame_w), int(y * frame_h))
 
-                cv2.line(frame, relative_thumb, relative_index, color=(255, 0, 0), thickness=2)
+                    cv2.line(frame, relative_thumb, relative_index, color=(255, 0, 0), thickness=2)
 
-                history.append(key_data)
+                if len(history):
+                    if fingers != history[0]['fingers']:
+                        history.clear()
+
+                history_delay += 1
+                if history_delay == 5:
+                    history.append(key_data)
+                    history_delay = 0
 
                 functions()
 
@@ -399,10 +476,12 @@ def process(frame, times):
             if right_gesture:
                 rightText.set(right_gesture)
                 
-            times.append(time.time())
+            times.append(time.time())"""
         else:  # if resultHand.multi_hand_landmarks
-            leftText.set("")
-            rightText.set("")
+            history.clear()
+            """leftText.set("")
+            rightText.set("")"""
+    """
     else:  # if not "off"
         leftText.set("")
         rightText.set("")"""
@@ -415,7 +494,21 @@ def process(frame, times):
     if mode == "rps":
         rps(frame, gesture)
 
+    show_trails(frame, frame_w, frame_h)
+
     return frame
+
+
+def show_trails(frame, w, h):
+    for current in history:
+        cur_val = list(current.values())
+        wrist = cur_val[0]
+        cur_fingers = cur_val[1:-1]
+        cur_is_up = cur_val[-1]
+        for finger, up in zip(cur_fingers, cur_is_up):
+            if up:
+                x, y = finger
+                cv2.circle(frame, (int(x * w), int(y * h)), 3, (0, 255, 0), 1)
 
 
 def gen_frames():
@@ -426,17 +519,22 @@ def gen_frames():
         if cap is None:
             continue
 
-        ret = False
-
         with lock:
             ret, frame = cap.read()
 
         if not ret:
             break
 
-        # frame_h, frame_w, _ = frame.shape
-        # frame = cv2.resize(frame, (1280, 720))
-        frame = cv2.resize(frame, (854, 480))
+        # Perform flips
+        if not h_flip:
+            frame = cv2.flip(frame, 1)
+        if v_flip:
+            frame = cv2.flip(frame, 0)
+
+        # frame = cv2.resize(frame, (854, 480))
+        frame = cv2.resize(frame, (1280, 720))
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         frame = process(frame, None)
 
@@ -446,11 +544,7 @@ def gen_frames():
                         print(history[-1])
                     prev = cur"""
 
-        # Perform flips
-        if h_flip:
-            frame = cv2.flip(frame, 1)
-        if v_flip:
-            frame = cv2.flip(frame, 0)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
         # Add fps counter
         if fps:
@@ -511,9 +605,25 @@ def submit():
     print(f"Selected Option: {mode}")
     return jsonify({"message": f"You selected {mode}"})
 
+@app.route('/load', methods=['GET'])
+def loadConfig():
+    scripts = [f for f in os.listdir(scripts_dir) if os.path.isfile(os.path.join(scripts_dir, f))]
+
+    return {"config": config_data['config'], "scripts": scripts}
+
+@app.route('/save', methods=['POST'])
+def saveConfig():
+    data = request.form.get('config')
+    config_data['config'] = json.loads(data)
+
+    with open("config.json", "w") as config_file:
+        json.dump(config_data, config_file)
+
+    return jsonify(success=True, message="Saved")
+
 
 def shutdown():
-    time.sleep(1)
+    time.sleep(3)
     os.kill(os.getpid(), signal.SIGINT)
 
 
@@ -526,8 +636,6 @@ def close_app():
 
     shutdown_thread = threading.Thread(target=shutdown)
     shutdown_thread.start()
-
-    time.sleep(5)
 
     return jsonify(success=True, message="Closing Application")
 

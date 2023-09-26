@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Gesture Connect Configuration</title>
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='scss/configuration.css') }}"
+    />
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/configuration.js') }}"></script>
+  </head>
+  <body>
+    <button id="back-btn" class="button back-btn" onclick="changePage('.')">
+      Back
+    </button>
+    <button id="save-btn" class="button save-btn" onclick="save()">
+      Save
+    </button>
+    <button id="reload-btn" class="button reload-btn" onclick="changePage('/configuration')">
+      Reload
+    </button>
+    <button id="quit-btn" class="button quit-btn" onclick="tabClosed()">
+      Quit
+    </button>
+
+    <div id="items" class="container">
+      <button id="addButton" class="button add-button" onclick="addItem()">
+        +
+      </button>
+    </div>
+  </body>
+</html>

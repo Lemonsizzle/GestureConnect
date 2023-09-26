@@ -1,7 +1,15 @@
 .quit-btn {
+  font-size: 20px;
   position: absolute;
   top: 0;
   right: 0;
+}
+
+.back-btn {
+  font-size: 20px;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 body {
@@ -29,14 +37,14 @@ div {
   text-decoration: none;
 }
 .button:hover {
-  background-color: #3a3a3a;
+  background-color: #383838;
 }
 
 .tabs .tab-button {
   padding: 10px 15px;
 }
 .tabs .tab-button:hover {
-  background-color: #3a3a3a;
+  background-color: #383838;
 }
 .tabs .tab-button.active {
   background-color: #333;

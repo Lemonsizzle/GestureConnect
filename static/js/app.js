@@ -83,7 +83,6 @@ function remove(btn) {
 
   xhr.send("shape=" + btn);
 
-  // Assuming there is an element in your HTML like this: <div id="myElement">Hello</div>
   var element = document.getElementById(btn);
   if (element) {
     element.remove();
@@ -102,6 +101,29 @@ function record(btn) {
   };*/
 
   xhr.send("shape=" + btn);
+}
+
+function newGesture() {
+  var userInput = prompt("What is your gesture called: ");
+
+  if (document.getElementById(userInput) !== null) {
+    console.log(userInput + " already exists");
+    return;
+  }
+  userInput = userInput.replace(/\s+/g, '');
+  console.log("User input is: " + userInput);
+
+  var div = document.getElementById("record-btns");
+  var button = document.createElement("button");
+
+  button.className = "button";
+  button.id = userInput;
+  button.value = userInput;
+  button.innerHTML = userInput;
+  button.onclick = function() { record(this.value); };
+  button.oncontextmenu = function() { remove(this.value); return false; };
+
+  div.appendChild(button);
 }
 
 function functionSelected(choice) {
