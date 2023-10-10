@@ -133,7 +133,22 @@ class database:
         conn.close()
 
     def getLast(self):
-        pass
+        # Establish the database connection and get a cursor
+        conn = sqlite3.connect(self.name)
+        cur = conn.cursor()
+
+        # Query to retrieve the last entered row based on a primary key (assuming 'id' is the primary key)
+        query = '''SELECT * FROM static_data
+                   ORDER BY id DESC
+                   LIMIT 1;
+                '''
+
+        cur.execute(query)
+        row = cur.fetchone()
+
+        conn.close()
+
+        return row
 
     def undo(self):
         # Establish the database connection and get a cursor
@@ -203,6 +218,18 @@ class database:
         insert_query = f"INSERT INTO {csv_filename} ({', '.join(header)}) VALUES ({', '.join(['?' for _ in header])})"
 
         cur.executemany(insert_query, rows)
+
+        # Commit changes and close connection
+        conn.commit()
+        conn.close()
+
+    def clear(self):
+        # Establish SQLite connection and create table
+        conn = sqlite3.connect(self.name)
+        cur = conn.cursor()
+
+        for table_name in self.get_all_table_names():
+            cur.execute(f'''delete from {table_name}''')
 
         # Commit changes and close connection
         conn.commit()
