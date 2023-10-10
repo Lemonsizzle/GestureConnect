@@ -10,13 +10,14 @@
 
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     {#
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     #}
   </head>
   <body>
     <button id="quit-btn" class="button quit-btn" onclick="tabClosed()">
-      Back
+      Quit
     </button>
 
     <img id="live" src="{{ url_for('video_feed') }}" />
@@ -63,21 +64,22 @@
 
       <div class="tab-pane" id="trainer-pane">
         <h3>Left click to train, right click to delete</h3>
-        {% for class in classes %}
-        <button
-          class="button"
-          id="{{ class[0] }}"
-          value="{{ class[0] }}"
-          onclick="record(this.value)"
-          oncontextmenu="remove(this.value); return false;"
-        >
-          {{ class[0] }}
-        </button>
-        {% endfor %}
+        <div id="record-btns">
+          {% for class in classes %}
+          <button
+            class="button"
+            id="{{ class[0] }}"
+            value="{{ class[0] }}"
+            onclick="record(this.value)"
+            oncontextmenu="remove(this.value); return false;"
+          >
+            {{ class[0] }}
+          </button>
+          {% endfor %}
+        </div>
         <br />
-      <button class="button" onclick="undo()">
-        Undo
-      </button>
+        <button class="button" onclick="newGesture()">New</button>
+        <button class="button" onclick="undo()">Undo</button>
       </div>
 
       <div class="tab-pane" id="settings-pane">
@@ -121,5 +123,11 @@
         <label for="vflip"> Vertical Flip</label>
       </div>
     </div>
+    <div id="live-graph"></div>
+  <script>
+    window.onload = function () {
+      updateGraph();
+    }
+  </script>
   </body>
 </html>

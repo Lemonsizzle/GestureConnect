@@ -206,3 +206,32 @@ function changeSource() {
 function test() {
   getCameraSources();
 }
+
+
+// Function to update the graph
+function updateGraph() {
+    var liveGraph = document.getElementById('live-graph');
+    // Make an AJAX request to fetch the timing_data from the server
+    fetch('/get_timing_data')
+        .then(response => response.json())
+        .then(data => {
+            // Create or update the Plotly graph
+            if (!liveGraph.data) {
+                var trace = {
+                    y: data,
+                    mode: 'lines+markers',
+                    name: 'Timing Data'
+                };
+                var layout = {
+                    title: 'Live Timing Data',
+                    yaxis: { title: 'Delta Time (s)' }
+                };
+                var graphData = [trace];
+                Plotly.newPlot(liveGraph, graphData, layout);
+            } else {
+                Plotly.update(liveGraph, { y: [data] });
+            }
+        })
+        .catch(error => console.error('Error fetching timing data:', error));
+    setTimeout(updateGraph, 1000);
+}
