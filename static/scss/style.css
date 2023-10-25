@@ -24,7 +24,7 @@ body {
 /* If you are using any images or divs that you also want to center */
 img,
 div {
-  margin: 0 auto;
+  margin: 0;
 }
 
 .button {

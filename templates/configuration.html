@@ -11,7 +11,6 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/configuration.js') }}"></script>
   </head>
-  <body>
     <button id="back-btn" class="button back-btn" onclick="changePage('.')">
       Back
     </button>
@@ -25,10 +24,27 @@
       Quit
     </button>
 
-    <div id="items" class="container">
-      <button id="addButton" class="button add-button" onclick="addItem()">
-        +
-      </button>
+    <div class="all_items">
+      <div id="left_items" class="container">
+        <h1>Left</h1>
+        <button id="left_add" class="button add-button" onclick="addItem('left')">
+          +
+        </button>
+      </div>
+
+      <div id="either_items" class="container">
+        <h1>Either</h1>
+        <button id="either_add" class="button add-button" onclick="addItem('either')">
+          +
+        </button>
+      </div>
+
+      <div id="right_items" class="container">
+        <h1>Right</h1>
+        <button id="right_add" class="button add-button" onclick="addItem('right')">
+          +
+        </button>
+      </div>
     </div>
   </body>
 </html>
