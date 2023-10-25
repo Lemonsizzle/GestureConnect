@@ -1,0 +1,1 @@
+{"app": {"src": "0", "scripts": "scripts"}, "config": {"either": {"scissors": {"up": ["scroll_down.macro"], "down": ["scroll_up.macro"]}}, "left": {"paper": {"right": ["left.macro"]}}, "right": {"paper": {"left": ["right.macro"]}}}}
