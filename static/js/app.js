@@ -126,6 +126,19 @@ function newGesture() {
   div.appendChild(button);
 }
 
+function build() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "/build", true);
+  xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  /*xhr.onreadystatechange = function () {
+    if (this.readyState == 4 && this.status == 200) {
+      var response = JSON.parse(this.responseText);
+      alert(response.message);
+    }
+  };*/
+  xhr.send();
+}
+
 function functionSelected(choice) {
   var xhr = new XMLHttpRequest();
   xhr.open("POST", "/submit", true);
@@ -202,11 +215,6 @@ function changeSource() {
   var formData = "src=" + src;
   xhr.send(formData);
 }
-
-function test() {
-  getCameraSources();
-}
-
 
 // Function to update the graph
 function updateGraph() {

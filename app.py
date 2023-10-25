@@ -5,7 +5,6 @@ import signal
 import threading
 import time
 import json
-
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -65,14 +64,21 @@ v_flip = False
 
 mode = "off"
 
-lock = threading.Lock()
+cap_lock = threading.Lock()
 
-history = deque(maxlen=10)
+history_lock = threading.Lock()
+right_history = deque(maxlen=10)
+left_history = deque(maxlen=10)
+
+
+@app.route('/build', methods=['POST'])
+def build():
+    ml_manager.build()
 
 
 @app.route('/change_source', methods=['POST'])
 def change_source(src=None):
-    global cap, lock
+    global cap, cap_lock
     if src is None:
         src = request.form.get('src')
 
@@ -91,7 +97,7 @@ def change_source(src=None):
 
     # Critical section of code that only one thread can access at a time
     print("Thread entering critical section (Changing source)")
-    with lock:
+    with cap_lock:
         if cap.isOpened():
             cap.release()
         cap = cv2.VideoCapture(src)
@@ -268,42 +274,65 @@ def calculateMovement(previous, current):
             return "up"
 
 
-def functions(gesture):
-    if len(history) < 2 or gesture is None:
+def functions(hand, gesture, history):
+    global waiting_right, waiting_left
+    if gesture is None:
         return
-
-    config = config_data['config']
-
-    if gesture not in config:
+    if len(history) < 2 or not len(gesture) or gesture == "NONE":
         return
 
     previous = history[-2]
     current = history[-1]
 
-    cur_val = list(current.values())
-    cur_wrist = cur_val[0]
+    cur_center = current["center"]
+    prev_center = previous["center"]
 
-    previous_val = list(previous.values())
-    prev_wrist = previous_val[0]
+    mvmt = calculateMovement(prev_center, cur_center)
 
-    mvmt = calculateMovement(prev_wrist, cur_wrist)
+    if hand in config_data['config']:
+        config = config_data['config'][hand]
 
-    gesture = config[gesture]
+        if gesture in config:
+            config_gesture = config[gesture]
+            if mvmt in config_gesture:
+                scripts = config_gesture[mvmt]
+                for script in scripts:
+                    script_thread = threading.Thread(target=script_runner.run_script, args=(script,))
+                    script_thread.start()
+                else:
+                    if hand == "right":
+                        waiting_right = True
+                    elif hand == "left":
+                        waiting_left = True
 
-    if mvmt not in gesture:
+    if "either" not in config_data['config']:
         return
+    config = config_data['config']["either"]
 
-    scripts = gesture[mvmt]
+    if gesture not in config:
+        return
+    config_gesture = config[gesture]
+
+    if mvmt not in config_gesture:
+        return
+    scripts = config_gesture[mvmt]
     for script in scripts:
         script_thread = threading.Thread(target=script_runner.run_script, args=(script,))
         script_thread.start()
+    else:
+        if hand == "right":
+            waiting_right = True
+        elif hand == "left":
+            waiting_left = True
 
 
 history_delay = 0
 
+waiting_right, waiting_left = False, False
+
 
 def process(frame, times):
-    global resultHand, history_delay
+    global resultHand, history_delay, right_history, left_history, waiting_right, waiting_left
 
     left_gesture = None
     right_gesture = None
@@ -350,6 +379,9 @@ def process(frame, times):
                 ys = [y for _, y in landmark_points]
                 wrist = (xs[0], ys[0])
 
+                center_point = (int(np.mean(xs, axis=0).item() * frame_w), int(np.mean(ys, axis=0).item() * frame_h))
+                cv2.circle(frame, center_point, 3, (255, 0, 0), 5)
+
                 minx, maxx = np.min(xs), np.max(xs)
                 miny, maxy = np.min(ys), np.max(ys)
 
@@ -376,6 +408,7 @@ def process(frame, times):
                     "middle": (xs[12], ys[12]),
                     "ring": (xs[16], ys[16]),
                     "pinky": (xs[20], ys[20]),
+                    "center": center_point,
                     "fingers": fingers
                 }
 
@@ -391,42 +424,34 @@ def process(frame, times):
 
                 if hand_idx == left_hand_idx:
                     left_gesture = ml_manager.identify(distances[1:])[0]
+                    if history_delay == 5:
+                        left_history.append(key_data)
                 if hand_idx == right_hand_idx:
                     right_gesture = ml_manager.identify(distances[1:])[0]
+                    if history_delay == 5:
+                        right_history.append(key_data)
 
-                # TODO: implement handedness
-                """if len(history):
-                    if right_gesture != right_history[0]:
-                        right_history.clear()
-                    if left_gesture != left_history[0]:
-                        left_history.clear()"""
-
-                if len(history):
-                    if fingers != history[0]['fingers']:
-                        history.clear()
-
-                history_delay += 1
-                if history_delay == 5:
-                    history.append(key_data)
-                    history_delay = 0
-
-                if right_gesture != "NONE":
-                    functions(right_gesture)
-
-                """for idx, finger in enumerate(fingers):
-                    if finger:
-                        cv2.putText(frame, str(1), (int(xs[4 * idx + 4] * frame_w), int(ys[4 * idx + 4] * frame_h)),
-                                    cv2.FONT_HERSHEY_SIMPLEX,
-                                    2, (255, 0, 0), 3)"""
+            with history_lock:
+                if not waiting_right:
+                    functions("right", right_gesture, right_history)
+                if not waiting_left:
+                    functions("left", left_gesture, left_history)
+            if history_delay == 5 and mode == "on":
+                history_delay = 0
+            history_delay += 1
 
             if left_gesture:
                 pass
-                #leftText.set(left_gesture)
+                # leftText.set(left_gesture)
             if right_gesture:
                 pass
-                #rightText.set(right_gesture)
+                # rightText.set(right_gesture)
         else:  # if resultHand.multi_hand_landmarks
-            history.clear()
+            with history_lock:
+                left_history.clear()
+                right_history.clear()
+            waiting_right = False
+            waiting_left = False
             """leftText.set("")
             rightText.set("")"""
     """
@@ -451,7 +476,7 @@ def gen_frames():
         if cap is None:
             continue
 
-        with lock:
+        with cap_lock:
             ret, frame = cap.read()
 
         if not ret:
@@ -464,7 +489,10 @@ def gen_frames():
             frame = cv2.flip(frame, 0)
 
         # frame = cv2.resize(frame, (854, 480))
-        frame = cv2.resize(frame, (1280, 720))
+        h, w = frame.shape[:-1]
+        ratio = h / w
+        new_w = 800
+        frame = cv2.resize(frame, (new_w, int(new_w * ratio)))
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -477,7 +505,7 @@ def gen_frames():
         # Add fps counter
         if fps:
             # fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
-            fps = 1/timing_data[0]
+            fps = 1 / timing_data[0]
             cv2.putText(frame, "FPS : " + str(fps), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50, 170, 50), 2)
 
         ret, buffer = cv2.imencode('.jpg', frame)
